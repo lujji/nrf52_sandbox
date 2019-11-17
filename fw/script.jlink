@@ -1,0 +1,5 @@
+ExitOnError 1
+r
+h
+loadfile ./_build/nrf52832_xxaa.hex
+qc
