@@ -35,7 +35,7 @@ class BleDevice:
 
         print('Searching for device.. ', end='')
         dev_proxy = None
-        for i in range(timeout*10):
+        for _ in range(timeout*10):
             dev_proxy = self.get_proxy_by_uuid(dev_uuid, 'org.bluez.Device1', 'UUIDs')
             if dev_proxy:
                 break
@@ -51,7 +51,7 @@ class BleDevice:
         dev_prop = dbus.Interface(dev_proxy, dbus_interface='org.freedesktop.DBus.Properties')
         dev = dbus.Interface(dev_proxy, dbus_interface='org.bluez.Device1')
         dev.Connect()
-        for i in range(timeout*10):
+        for _ in range(timeout*10):
             if dev_prop.Get('org.bluez.Device1', 'ServicesResolved',
                             dbus_interface='org.freedesktop.DBus.Properties') == True:
                             break
@@ -67,7 +67,7 @@ class BleDevice:
     def listen(self, char_uuid, prop_changed_cb):
         """ callback function: prop_changed_cb(iface, changed_props, invalidated_props) """
         # get charecteristic
-        proxy = self.get_proxy_by_uuid(char_uuid, 'org.bluez.GattCharacteristic1', 'UUID')
+        proxy = self.get_proxy_by_uuid(char_uuid, 'org.bluez.GattCharacteristic1', 'UUID') # check for errors
 
         # connect to PropertiesChanged signal
         prop = dbus.Interface(proxy, dbus_interface='org.freedesktop.DBus.Properties')
@@ -76,3 +76,13 @@ class BleDevice:
         # start notifications
         chrc = dbus.Interface(proxy, dbus_interface='org.bluez.GattCharacteristic1')
         chrc.StartNotify(reply_handler=lambda:None, error_handler=self.__error_cb, dbus_interface='org.bluez.GattCharacteristic1')
+
+    def write(self, char_uuid, data):
+        proxy = self.get_proxy_by_uuid(char_uuid, 'org.bluez.GattCharacteristic1', 'UUID') # check for errors
+        chrc = dbus.Interface(proxy, dbus_interface='org.bluez.GattCharacteristic1')
+        chrc.WriteValue(data, {}, signature='aya{sv}')
+
+    def read(self, char_uuid):
+        proxy = self.get_proxy_by_uuid(char_uuid, 'org.bluez.GattCharacteristic1', 'UUID') # check for errors
+        chrc = dbus.Interface(proxy, dbus_interface='org.bluez.GattCharacteristic1')
+        return [int(i) for i in chrc.ReadValue({})]

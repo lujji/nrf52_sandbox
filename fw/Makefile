@@ -1,12 +1,12 @@
-PROJECT_NAME     := nrf_meter
+PROJECT_NAME     := ble_app_blinky
 TARGETS          := nrf52832_xxaa
 OUTPUT_DIRECTORY := _build
 
-SDK_ROOT := ../../..
+SDK_ROOT := $(HOME)/Downloads/DeviceDownload/
 PROJ_DIR := .
 
 $(OUTPUT_DIRECTORY)/nrf52832_xxaa.out: \
-  LINKER_SCRIPT  := nrf_meter_gcc_nrf52.ld
+  LINKER_SCRIPT  := ble_app_blinky_gcc_nrf52.ld
 
 # Source files common to all targets
 SRC_FILES += \
@@ -49,8 +49,6 @@ SRC_FILES += \
   $(SDK_ROOT)/modules/nrfx/drivers/src/prs/nrfx_prs.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_uart.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_uarte.c \
-  $(PROJ_DIR)/main.c \
-  $(PROJ_DIR)/gatt_srv.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT_Syscalls_GCC.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT_printf.c \
@@ -64,6 +62,11 @@ SRC_FILES += \
   $(SDK_ROOT)/components/softdevice/common/nrf_sdh.c \
   $(SDK_ROOT)/components/softdevice/common/nrf_sdh_ble.c \
   $(SDK_ROOT)/components/softdevice/common/nrf_sdh_soc.c \
+  $(PROJ_DIR)/main.c \
+  $(PROJ_DIR)/gatt_srv.c \
+  $(PROJ_DIR)/lsm6ds3.c \
+  $(PROJ_DIR)/hx711.c \
+  $(PROJ_DIR)/uart.c \
 
 # Include folders common to all targets
 INC_FOLDERS += \

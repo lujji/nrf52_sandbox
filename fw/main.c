@@ -1,42 +1,3 @@
-/**
- * Copyright (c) 2015 - 2019, Nordic Semiconductor ASA
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form, except as embedded into a Nordic
- *    Semiconductor ASA integrated circuit in a product or a software update for
- *    such product, must reproduce the above copyright notice, this list of
- *    conditions and the following disclaimer in the documentation and/or other
- *    materials provided with the distribution.
- *
- * 3. Neither the name of Nordic Semiconductor ASA nor the names of its
- *    contributors may be used to endorse or promote products derived from this
- *    software without specific prior written permission.
- *
- * 4. This software, with or without modification, must only be used with a
- *    Nordic Semiconductor ASA integrated circuit.
- *
- * 5. Any software provided in binary form under this license must not be reverse
- *    engineered, decompiled, modified and/or disassembled.
- *
- * THIS SOFTWARE IS PROVIDED BY NORDIC SEMICONDUCTOR ASA "AS IS" AND ANY EXPRESS
- * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL NORDIC SEMICONDUCTOR ASA OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
@@ -55,14 +16,17 @@
 #include "nrf_ble_gatt.h"
 #include "nrf_ble_qwr.h"
 #include "nrf_pwr_mgmt.h"
-
-#include "gatt_srv.h"
+#include "nrf_delay.h"
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
-
 #include <SEGGER_RTT.h>
+
+#include "gatt_srv.h"
+#include "lsm6ds3.h"
+#include "hx711.h"
+#include "uart.h"
 
 #define DEVICE_NAME                     "Cordic Stinky"                         /**< Name of device. Will be included in the advertising data. */
 
@@ -119,6 +83,11 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
     NRF_LOG_INFO("assert@ %s:%d\n", line_num, p_file_name);
 }
 
+static volatile int update_flag;
+
+int32_t hx711_value;
+uint16_t x, y, z;
+
 static void periodic_tx_handler(void * p_context) {
     (void) p_context;
     static uint16_t ctr = 0;
@@ -126,10 +95,10 @@ static void periodic_tx_handler(void * p_context) {
 
     uint8_t tx_data[TX_DATA_LEN] = { 0 };
 
-    int32_t hx711_value = sin(0.1*ctr) * 10000;
-    uint16_t x = ctr % 128;
-    uint16_t y = (ctr*2 + 20) % 128;
-    uint16_t z = (ctr*4 + 40) % 128;
+    // int32_t hx711_value = sin(0.1*ctr) * 10000;
+    // uint16_t x = ctr % 128;
+    // uint16_t y = (ctr*2 + 20) % 128;
+    // uint16_t z = (ctr*4 + 40) % 128;
 
     tx_data[0] = hx711_value;
     tx_data[1] = hx711_value >> 8;
@@ -144,6 +113,8 @@ static void periodic_tx_handler(void * p_context) {
 
     tx_data[8] = z;
     tx_data[9] = z >> 8;
+
+    update_flag = 1;
 
     gatt_srv_on_change(m_conn_handle, &m_srv, tx_data);
 }
@@ -273,10 +244,10 @@ static void srv_write_handler(uint16_t conn_handle, gatt_srv_t * p_srv, const ui
 {
     NRF_LOG_INFO("data: %02x, %02x, %02x, %02x", data[0], data[1], data[2], data[3]);
     if (data[0]) {
-        NRF_P0->OUT |= (1 << 8);
+        NRF_P0->OUT |= (1 << 17);
         NRF_LOG_INFO("Received 1!\n");
     } else {
-        NRF_P0->OUT &= ~(1 << 8);
+        NRF_P0->OUT &= ~(1 << 17);
         NRF_LOG_INFO("Received 0!\n");
     }
 }
@@ -368,10 +339,10 @@ static void advertising_start(void)
 
     err_code = sd_ble_gap_adv_start(m_adv_handle, APP_BLE_CONN_CFG_TAG);
     APP_ERROR_CHECK(err_code);
-
-    NRF_P0->OUT |= (1 << 6);
 }
 
+
+static volatile int connected;
 
 /**@brief Function for handling BLE events.
  *
@@ -386,8 +357,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     {
         case BLE_GAP_EVT_CONNECTED:
             NRF_LOG_INFO("Connected\n");
-            NRF_P0->OUT |= (1 << 7);
-            NRF_P0->OUT &= ~(1 << 6);
+            //NRF_P0->OUT |= (1 << 17);
+            connected = 1;
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
             APP_ERROR_CHECK(err_code);
@@ -395,7 +366,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
         case BLE_GAP_EVT_DISCONNECTED:
             NRF_LOG_INFO("Disconnected\n");
-            NRF_P0->OUT &= ~(1 << 7);
+            connected = 0;
+            //NRF_P0->OUT &= ~(1 << 17);
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
             advertising_start();
             break;
@@ -499,7 +471,15 @@ static void idle_state_handle(void)
 
 int main(void)
 {
-    NRF_P0->DIR |= (1 << 6) | (1 << 7) | (1 << 8);
+    NRF_P0->DIR |= (1 << 16) | (1 << 17);
+    NRF_P0->OUT |= (1 << 16);
+    nrf_delay_ms(100);
+    NRF_P0->OUT &= ~(1 << 16);
+
+    hx711_init();
+	lsm6ds3_init();
+	lsm6ds3_accel_enable();
+    lsm6ds3_gyro_enable();
 
     timers_init();
     power_management_init();
@@ -515,6 +495,18 @@ int main(void)
 
     for (;;)
     {
+        if (update_flag) {
+            if (connected) NRF_P0->OUT |= (1 << 17);
+            hx711_value = hx711_read();
+		    //lsm6ds3_accel_wait_ready();
+		    //lsm6ds3_accel_read(&x, &y, &z);
+		    lsm6ds3_gyro_wait_ready();
+		    lsm6ds3_gyro_read(&x, &y, &z);
+            if (connected) NRF_P0->OUT &= ~(1 << 17);
+
+            NRF_LOG_INFO("x = %d, y = %d, z = %d\nv=%d", x, y, z, hx711_value);
+            update_flag = 0;
+        }
         idle_state_handle();
     }
 }

@@ -4,11 +4,13 @@ import numpy as np
 import dbus, time
 from dbus.mainloop.glib import DBusGMainLoop
 import BleDevice
+from math import *
 
 WINDOW_LEN = 100
 
-dev_uuid  = '00001523-1212-efde-1523-785feabcd123'
-char_uuid = '00001524-1212-efde-1523-785feabcd123'
+dev_uuid     = '00001523-1212-efde-1523-785feabcd123'
+rx_char_uuid = '00001524-1212-efde-1523-785feabcd123'
+tx_char_uuid = '00001525-1212-efde-1523-785feabcd123'
 
 def prop_changed_cb(iface, changed_props, invalidated_props):
     values = changed_props.get('Value', None)
@@ -25,9 +27,15 @@ def prop_changed_cb(iface, changed_props, invalidated_props):
 
 def update_curve(adc, x, y, z):
     global data, curve
+
+    pitch = degrees(atan(x/sqrt(y**2 + z**2)))
+    roll  = degrees(atan(y/sqrt(x**2 + z**2)))
+    phi   = degrees(acos(x/sqrt(x**2 + y**2 + z**2)))
+
     data[0].append(x)
     data[1].append(y)
     data[2].append(z)
+    data[3].append(phi)
     data[4].append(adc)
 
     # roll
@@ -40,7 +48,7 @@ def main():
     DBusGMainLoop(set_as_default=True)
     dev = BleDevice.BleDevice()
     dev.connect(dev_uuid)
-    dev.listen(char_uuid, prop_changed_cb)
+    dev.listen(rx_char_uuid, prop_changed_cb)
 
     #QtGui.QApplication.setGraphicsSystem('opengl')
     app = QtGui.QApplication(['BLE Plotter'])
@@ -61,7 +69,7 @@ def main():
     data.append([0] * WINDOW_LEN)
     data.append([0] * WINDOW_LEN)
     data.append([0] * WINDOW_LEN)
-    #plt.setYRange(0, 20000, padding=0)
+    plt.setYRange(-32768, 32768, padding=0)
 
     plt = win.addPlot()
     plt.addLegend()
