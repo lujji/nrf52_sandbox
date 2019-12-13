@@ -86,7 +86,8 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 static volatile int update_flag;
 
 int32_t hx711_value;
-uint16_t x, y, z;
+int16_t accel[3]; // xyz
+int16_t gyro[3];
 
 static void periodic_tx_handler(void * p_context) {
     (void) p_context;
@@ -100,19 +101,32 @@ static void periodic_tx_handler(void * p_context) {
     // uint16_t y = (ctr*2 + 20) % 128;
     // uint16_t z = (ctr*4 + 40) % 128;
 
-    tx_data[0] = hx711_value;
-    tx_data[1] = hx711_value >> 8;
-    tx_data[2] = hx711_value >> 16;
-    tx_data[3] = hx711_value >> 24;
+    int pos = 0;
 
-    tx_data[4] = x;
-    tx_data[5] = x >> 8;
+    tx_data[pos++] = hx711_value;
+    tx_data[pos++] = hx711_value >> 8;
+    tx_data[pos++] = hx711_value >> 16;
+    tx_data[pos++] = hx711_value >> 24;
 
-    tx_data[6] = y;
-    tx_data[7] = y >> 8;
+    /* accelerometer XYZ */
+    tx_data[pos++] = accel[0];
+    tx_data[pos++] = accel[0] >> 8;
 
-    tx_data[8] = z;
-    tx_data[9] = z >> 8;
+    tx_data[pos++] = accel[1];
+    tx_data[pos++] = accel[1] >> 8;
+
+    tx_data[pos++] = accel[2];
+    tx_data[pos++] = accel[2] >> 8;
+
+    /* gyroscope XYZ */
+    tx_data[pos++] = gyro[0];
+    tx_data[pos++] = gyro[0] >> 8;
+
+    tx_data[pos++] = gyro[1];
+    tx_data[pos++] = gyro[1] >> 8;
+
+    tx_data[pos++] = gyro[2];
+    tx_data[pos++] = gyro[2] >> 8;
 
     update_flag = 1;
 
@@ -498,13 +512,13 @@ int main(void)
         if (update_flag) {
             if (connected) NRF_P0->OUT |= (1 << 17);
             hx711_value = hx711_read();
-		    //lsm6ds3_accel_wait_ready();
-		    //lsm6ds3_accel_read(&x, &y, &z);
-		    lsm6ds3_gyro_wait_ready();
-		    lsm6ds3_gyro_read(&x, &y, &z);
+		    lsm6ds3_wait_data_ready();
+            lsm6ds3_accel_read(accel);
+		    lsm6ds3_gyro_read(gyro);
             if (connected) NRF_P0->OUT &= ~(1 << 17);
 
-            NRF_LOG_INFO("x = %d, y = %d, z = %d\nv=%d", x, y, z, hx711_value);
+            NRF_LOG_INFO("x = %d, y = %d, z = %d\nv=%d",
+                    accel[0], accel[1], accel[2], hx711_value);
             update_flag = 0;
         }
         idle_state_handle();

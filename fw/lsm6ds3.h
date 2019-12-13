@@ -4,13 +4,12 @@
 #include <stdint.h>
 
 void lsm6ds3_init();
-void lsm6ds3_accel_wait_ready();
-void lsm6ds3_gyro_wait_ready();
+void lsm6ds3_wait_data_ready();
 void lsm6ds3_gyro_enable();
 void lsm6ds3_accel_enable();
 void lsm6ds3_accel_disable();
-void lsm6ds3_accel_read(int16_t *x, int16_t *y, int16_t *z);
-void lsm6ds3_gyro_read(int16_t *x, int16_t *y, int16_t *z);
+void lsm6ds3_accel_read(int16_t *xyz);
+void lsm6ds3_gyro_read(int16_t *xyz);
 
 uint8_t lsm6ds3_status_read();
 float lsm6ds3_temp_read();

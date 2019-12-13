@@ -53,7 +53,7 @@
 #define SRV_UUID_RX_CHAR     0x1525
 
 #define RX_DATA_LEN          4  // length in bytes
-#define TX_DATA_LEN          10 // length in bytes
+#define TX_DATA_LEN          16 // length in bytes
 
 typedef struct gatt_srv_s gatt_srv_t;
 typedef void (*gatt_srv_write_handler_t) (uint16_t conn_handle, gatt_srv_t * p_lbs, const uint8_t *data, int len);

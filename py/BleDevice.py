@@ -67,7 +67,7 @@ class BleDevice:
     def listen(self, char_uuid, prop_changed_cb):
         """ callback function: prop_changed_cb(iface, changed_props, invalidated_props) """
         # get charecteristic
-        proxy = self.get_proxy_by_uuid(char_uuid, 'org.bluez.GattCharacteristic1', 'UUID') # check for errors
+        proxy = self.get_proxy_by_uuid(char_uuid, 'org.bluez.GattCharacteristic1', 'UUID') # TODO: check for errors
 
         # connect to PropertiesChanged signal
         prop = dbus.Interface(proxy, dbus_interface='org.freedesktop.DBus.Properties')
@@ -78,11 +78,11 @@ class BleDevice:
         chrc.StartNotify(reply_handler=lambda:None, error_handler=self.__error_cb, dbus_interface='org.bluez.GattCharacteristic1')
 
     def write(self, char_uuid, data):
-        proxy = self.get_proxy_by_uuid(char_uuid, 'org.bluez.GattCharacteristic1', 'UUID') # check for errors
+        proxy = self.get_proxy_by_uuid(char_uuid, 'org.bluez.GattCharacteristic1', 'UUID') # TODO: check for errors
         chrc = dbus.Interface(proxy, dbus_interface='org.bluez.GattCharacteristic1')
         chrc.WriteValue(data, {}, signature='aya{sv}')
 
     def read(self, char_uuid):
-        proxy = self.get_proxy_by_uuid(char_uuid, 'org.bluez.GattCharacteristic1', 'UUID') # check for errors
+        proxy = self.get_proxy_by_uuid(char_uuid, 'org.bluez.GattCharacteristic1', 'UUID') # TODO: check for errors
         chrc = dbus.Interface(proxy, dbus_interface='org.bluez.GattCharacteristic1')
         return [int(i) for i in chrc.ReadValue({})]

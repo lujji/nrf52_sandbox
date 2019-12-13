@@ -123,28 +123,24 @@ float lsm6ds3_temp_read() {
 	return t;
 }
 
-void lsm6ds3_accel_wait_ready() {
-	while (!(lsm6ds3_status_read() & (1 << STATUS_REG_XLDA))) ;
+void lsm6ds3_wait_data_ready() {
+	while (!(lsm6ds3_status_read() & ((1 << STATUS_REG_XLDA) | ((1 << STATUS_REG_GDA))))) ;
 }
 
-void lsm6ds3_gyro_wait_ready() {
-	while (!(lsm6ds3_status_read() & (1 << STATUS_REG_GDA))) ;
-}
-
-void lsm6ds3_accel_read(int16_t *x, int16_t *y, int16_t *z) {
+void lsm6ds3_accel_read(int16_t *xyz) {
 	tx[0] = OUTX_L_XL | REG_READ;
 	spim_trx(7);
 
-	*x = rx[1] | (rx[2] << 8);
-	*y = rx[3] | (rx[4] << 8);
-	*z = rx[5] | (rx[6] << 8);
+	xyz[0] = rx[1] | (rx[2] << 8);
+	xyz[1] = rx[3] | (rx[4] << 8);
+	xyz[2] = rx[5] | (rx[6] << 8);
 }
 
-void lsm6ds3_gyro_read(int16_t *x, int16_t *y, int16_t *z) {
+void lsm6ds3_gyro_read(int16_t *xyz) {
 	tx[0] = OUTX_L_G | REG_READ;
 	spim_trx(7);
 
-	*x = rx[1] | (rx[2] << 8);
-	*y = rx[3] | (rx[4] << 8);
-	*z = rx[5] | (rx[6] << 8);
+	xyz[0] = rx[1] | (rx[2] << 8);
+	xyz[1] = rx[3] | (rx[4] << 8);
+	xyz[2] = rx[5] | (rx[6] << 8);
 }
